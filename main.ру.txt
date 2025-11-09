@@ -1,0 +1,51 @@
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from datetime import datetime
+
+BOT_TOKEN = "ТОКЕН_ОТ_BOTFATHER"
+ADMIN_CHAT_ID = -1001234567890  # замени на свой ID
+
+MIN_PRICE = 149
+MAX_PRICE = 249
+
+def is_working_hours():
+    now = datetime.now().hour
+    return 9 <= now or now == 0
+
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "🚴 Привет! Это VeloGo_EmelyanovoBot.\n\n"
+        "Мы доставим товар по Емельяново быстро и удобно!\n"
+        "Напиши, что нужно купить и куда доставить (адрес)."
+    )
+
+async def handle_order(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_working_hours():
+        await update.message.reply_text("⏰ Мы принимаем заказы с 09:00 до 00:00. Попробуйте позже 🙂")
+        return
+
+    order_text = update.message.text
+    user = update.message.from_user
+    price = MAX_PRICE if len(order_text) > 40 else MIN_PRICE
+
+    msg_for_admin = (
+        f"📦 Новый заказ!\n"
+        f"От: {user.first_name or 'Неизвестно'}\n"
+        f"Username: @{user.username}\n"
+        f"Текст заказа: {order_text}\n"
+        f"💰 Стоимость доставки: {price} ₽"
+    )
+
+    await context.bot.send_message(chat_id=ADMIN_CHAT_ID, text=msg_for_admin)
+    await update.message.reply_text(f"✅ Заказ принят!\nСтоимость доставки {price} ₽. Курьер скоро свяжется с вами!")
+
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_order))
+    print("Бот запущен 🚴")
+    await app.run_polling()
+
+import asyncio
+if name == "__main__":
+    asyncio.run(main())
